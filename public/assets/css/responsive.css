@@ -1,0 +1,971 @@
+
+@media(max-width:355px) {
+    ._feed_inner_timeline_reaction_link {
+        font-size: 12px;
+    }
+}
+@media(max-width:385px) {
+    ._top_inner_content_area_btn {
+        margin: 0 0 0 10px;
+    }
+    ._top_inner_content_area_left_item {
+        margin: 0 8px 0 0;
+    }
+}
+@media(max-width:390px) {
+    ._top_inner_content_area_left_item {
+        margin: 0 0 0 6px;
+    }
+    ._top_inner_content_area_btn {
+        margin: 0 0 0 6px;
+    }
+}
+@media(max-width:420px) {
+    /*---- chat Css ----*/
+    ._chat_box {
+        padding: 12px;
+    }
+    ._chat_left_inner_box_image {
+        display: flex;
+        align-items: flex-start;
+    }
+    ._chat_img {
+        width: 48px;
+        vertical-align: top;
+    }
+    ._chat_left_inner_box_txt {
+        max-width: 100%;
+        text-align: left;
+        flex: 1;
+        min-width: 0;
+        width: 0;
+    }
+    ._chat_left_inner_box_txt_para {
+        width: 160px;
+    }
+    ._chat_left_inner_box_txt_title {
+        font-size: 12px;
+    }
+    ._chat_left_inner_box_txt_para {
+        font-size: 12px;
+    }
+    ._chat_left_inner_box_date_para {
+        font-size: 12px;
+    }
+    ._chat_left_inner_box_date_txt {
+        width: 16px;
+        height: 16px;
+        font-size: 12px;
+    }
+    ._chat_left_box_btn_link {
+        font-size: 14px;
+    }
+    ._chat_left_form_input {
+        padding: 7px 4px 7px 36px;
+    }
+    ._chat_left_form_input::placeholder {
+        font-size: 12px;
+    }
+    /*---- chat Css ----*/
+}
+@media(max-width:410px) {
+    ._rect_img_mbl_none {
+        display: none;
+    }
+    /* ._chat_right {
+        height: calc(100vh - 82px);
+    } */
+}
+@media only screen and (max-width:575px) {
+    ._req_inner_btn_wrap {
+        margin: 0;
+    }
+    ._req_border {
+        border: 1px solid #ebe7e7;
+        margin: 20px 0;
+    }
+    ._req_inner_btn {
+        display: none;
+    }
+    ._req_top_content_title {
+        font-size: 20px;
+    }
+    ._request_card_title {
+        font-size: 16px;
+    }
+    ._req_mutual_box_txt {
+        font-size: 12px;
+    }
+    ._mobile_none {
+        display:none;
+    }
+    ._rect_img_mbl_none {
+        display: none;
+    }
+    ._top_inner_content_area_left_link {
+        font-size: 12px;
+        width: 60px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    ._top_inner_content_area_btn_link span svg {
+        margin: 0;
+    }
+    ._top_inner_content_area_btn_link {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 8px 16px;
+        width: 46.2px;
+        height: 30.2px;
+    }
+    ._layout_midle_title_box_txt_title {
+        font-size: 16px;
+    }
+    ._layout_middle_description_info_para {
+        font-size: 14px;
+    }
+    ._layout_middle_host_para {
+        font-size: 13px;
+    }
+    ._layout_middle_host_image {
+        flex: 0 0 64px;
+        width: 64px;
+        max-width: 64px;
+    }
+    ._host_img {
+        max-width: inherit;
+    }
+    ._layout_middle_host_content {
+        flex: 1 1;
+    }
+    ._top_inner_content_area_txt_title {
+        font-size: 16px;
+    }
+    ._top_inner_content_area_left_link {
+        font-size: 12px;
+        width: 60px;
+        height: 30px;
+    }
+    ._profile_info_wrap {
+        margin: -38px 0 0;
+    }
+    ._profile_card_progress_txt {
+        width: 150px;
+    }
+    ._profile_card_progress_txt {
+        width: 100% !important;
+    }
+    ._profile_info_des_image {
+        width: 140px;
+        flex: 0 0 140px;
+    }
+    ._profile_info_des_txt {
+        flex: 1 1;
+    }
+    ._top_inner_content_area_left_item {
+        margin: 0 0 0 8px;
+    }
+    ._top_inner_content_area_btn {
+        margin: 0 8px;
+    }
+    /*--- Chat Css -----*/
+    ._chat_inner_top_icon {
+        margin: 0 0 0 16px;
+    }
+    ._chat_right_top_inner_box_txt_title  {
+        font-size: 14px;
+    }
+    ._chat_right_top_inner_box_image {
+        width: 48px;
+        flex: 0 0 48px;
+    }
+    ._chat_right_top_inner_box_txt {
+        flex: 1 1;
+    }
+    ._chat_right_top_inner {
+        padding: 12px 8px !important;
+    }
+    ._chat_bottom_icon_link1 {
+        padding:0;
+        width: 48px;
+        height:42px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    ._chat_bottom_icon_list {
+        margin: 0 0 0 12px;
+    }
+    ._chat_right_bottom_inner {
+        padding: 10px 6px 2px !important;
+    }
+    ._chat_textarea::placeholder {
+        font-size: 12px;
+    }
+    ._border1 {
+        background: #F0F2F5;
+        display: none;
+    }
+    ._chat_middle_box_sender_txt_para {
+        font-size: 14px;
+    }
+    ._chat_middle_box {
+        padding: 12px 8px;
+    }
+    ._chat_right {
+        height: calc(100vh - 82px) !important;
+    }
+    ._chat_right_top_inner_box_txt_para {
+        font-size: 10px;
+    }
+    ._chat_middle_box_time_txt {
+        font-size: 10px;
+    }
+    ._chat_middle_day_txt { 
+        font-size: 12px;
+    }
+    ._chat_left_top {
+        padding: 12px 12px 0;
+    }
+    ._chat_left_bottom {
+        padding: 0 12px;
+    }
+    ._chat_middle_box_sender_txt {
+        padding: 12px;
+    }
+    /*--- Chat Css -----*/
+    /*--- group css ----*/
+    ._group_categories_btn_link {
+        padding: 12px 16px;
+    }
+    ._discover_event_btn_link {
+        padding: 12px 16px;
+    }
+}
+@media only screen and (max-width:767px){
+    ._friend_search_form {
+        justify-content: flex-start;
+        margin: 0px 0 20px 0;
+    }
+    /*--- Login Css -----*/
+    .form-check-input {
+        float: unset !important;
+    }
+    ._social_login_form_check {
+        text-align: center;
+    }
+    ._social_login_wrapper {
+        padding: 50px 0px;
+    }
+    /*--- Registration Css -----*/
+    ._social_registration_wrapper {
+        padding: 50px 0px;
+    }
+    /*--- Chat Css ----*/
+    ._chat_textarea {
+        width: 100% !important;
+    }
+    /*--- Chat Css ----*/
+    ._top_inner_content_area_btn_link span svg {
+        margin: 0;
+    }
+    /*--group css ----*/
+    ._group_categories_btn {
+        justify-content: start;
+        margin: 0 0 20px;
+    }
+    ._discover_event_btn {
+        justify-content: start;
+        margin: 0 0 20px;
+    }
+    ._req_top_btn {
+        justify-content: start;
+        margin: 0 0 20px;
+    }
+}
+/*iPad*/
+@media(max-width:991px){
+    ._req_inner_wrapper ._request_wrappper {
+        padding: 100px 0 100px 0;
+    }
+    /*--- Login Css -----*/
+    ._social_login_content {
+        margin: 30px 0 0 0;
+        text-align: center;
+    }
+    ._social_login_content_btn {
+        margin: 0 auto 40px auto;
+    }
+    ._social_login_content_bottom_txt::before {
+        width: 44% !important;
+    }
+    ._social_login_content_bottom_txt::after {
+        width: 44% !important;
+    }
+    ._social_login_form_check {
+        text-align: left;
+    }
+    ._top_logo {
+        margin: 0 auto;
+    }
+    /*--- Registration Css -----*/
+    ._social_registration_content {
+        margin: 30px 0 0 0;
+        text-align: center;
+    }
+    ._social_registration_content_btn {
+        margin: 0 auto 40px auto;
+    }
+    ._social_registration_content_bottom_txt::before {
+        width: 44% !important;
+    }
+    ._social_registration_content_bottom_txt::after {
+        width: 44% !important;
+    }
+    ._social_registration_form_check {
+        text-align: left;
+    }
+    ._social_registration_form_check {
+        text-align: center;
+    }
+    ._social_registration_form_check .form-check-input {
+        float: unset !important;
+    }
+    ._shape_three {
+        display: none;
+    }
+    ._shape_one {
+        display: none;
+    }
+    ._shape_two {
+        display: none;
+    }
+    /*--- Desktop Menu ---- */
+    ._header_nav {
+        display: none;
+    }
+    ._layout_mode_swithing_btn {
+        display: none;
+    }
+    /*---- Mobile Menu ----*/
+    ._header_mobile_menu{
+        display: block;
+    }
+    ._header_mobile_menu ._header_form_grp {
+        margin:0;
+    }
+    /*---- Mobile Menu Dropdown -----*/
+    ._mobile_menu_dark ._layout_mode_swithing_btn {
+        display: block;
+    }
+    /*---Layout CSS ----*/
+    ._layout {
+        height: 100%;
+    }
+    ._main_layout {
+        height: 100%;
+    }
+    ._layout_left_sidebar_wrap {
+        display: none;
+    }
+    ._layout_right_sidebar_wrap {
+        display: none;
+    }
+    ._layout_middle_wrap {
+        height: 100%;
+    }
+    ._feed_inner_ppl_card {
+        display: none;
+    }
+    ._feed_inner_text_area_bottom {
+        display: none;
+    }
+    ._feed_inner_text_area_bottom_mobile {
+        display: block;
+    }
+    ._feed_inner_ppl_card_mobile {
+        display: block;
+    }
+    ._layout_inner_wrap {
+        padding-top: 56px !important;
+    }
+    ._layout_middle_inner {
+        height: 100%;
+        padding: 18px 0 68px;
+    }
+    ._mobile_navigation_bottom_wrapper {
+        display: block;
+    }
+    ._group_categories_card_wrap {
+        display: none;
+    }
+    ._group_categories_card_mobile_wrap {
+        display: block;
+    }
+    ._group_recommend_card_wrap {
+        display: none;
+    }
+    ._group_recommend_card_mobile_wrap {
+        display: block;
+    }
+    ._group_recommend_top_txt {
+        display: none;
+    }
+    ._group_recommend_top_txt_mobile {
+        display: block;
+    }
+    ._discover_event_wrapper {
+        padding: 100px 0 70px 0;
+    }
+    ._layout_middle_inner_area {
+        height: 100%;
+    }
+    ._top_event_single_image_area {
+        padding: 64px 0 0;
+    }
+    ._left_inner_area_friends {
+        display: none;
+    }
+    ._left_inner_area_event {
+        display: none;
+    }
+    ._top_inner_content {
+        display: none;
+    }
+    ._top_inner_content_mobile {
+        display: block;
+        background:var(--bg2);
+    }
+    ._top_inner_profile_image {
+        display: none;
+    }
+    ._top_inner_content_area {
+        display: none;
+    }
+    ._top_inner_des_mobile {
+        display: block;
+    }
+    ._top_profile_img {
+        max-width: 136px;
+        height: 136px;
+        object-fit: cover;
+        cursor: pointer;
+    }
+    ._top_inner_content1 {
+        display: none;
+    }
+    ._top_inner_content1_mobile {
+        display: block;
+    }
+    ._top_inner_content_area_group_box {
+        margin: 0 !important;
+    }
+    ._layout_right_wrap {
+        display: none;
+    }
+    ._layout_left_wrap {
+        display: none;
+    }
+    ._layout_wrap_area {
+        padding: 10px 0 70px 0;
+    }
+    ._profile_card_upload {
+        display: none;
+    }
+    ._profile_card_upload_mobile {
+        display: block;
+    }
+    ._profile_card {
+        display: none;
+    }
+    ._profile_cover_img {
+        height: 220px;
+    }
+    ._profile_info_wrap {
+        display: block;
+    }
+    ._profile_cover {
+        height: auto;
+    }
+    ._profile_card_pro_img {
+        max-width: 136px;
+        height: 140px;
+    }
+    ._profile_cover_wrap {
+        position: relative;
+        z-index: -1;
+    }
+    ._profile_card_info_title {
+        font-size: 20px;
+    }
+    ._profile_card_progress_txt {
+        width: 232px;
+        margin:8px 0 0;
+        position: relative;
+    }
+    ._profile_card_progreess_bar {
+        bottom: -20px;
+    }
+    ._profile_card_progreess_bar_image {
+        bottom: -20px;
+    }
+    ._profile_nav_wrap_mobile {
+        display: block;
+    }
+    ._top_inner_content_area_left_link {
+        font-size: 12px;
+        width: 60px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    ._top_inner_content_area_btn_link {
+        padding: 0;
+        height: 30px;
+        width: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    ._top_inner_content_area_right {
+        margin: 0 !important;
+    }
+    ._layout_inner_wrap_area {
+        padding: 0 0 66px 0;
+    }
+    ._group_btn_wrap {
+        display: none;
+    }
+    ._group_categories_btn1 {
+        margin: -30px 0 0;
+    }
+    ._group_recommend_wrapper  {
+        padding-bottom:90px;
+    }
+    /*---Layout CSS End ----*/
+
+    /*---- Chat Css ----*/
+    ._layout_chat {
+        display: none;
+    }
+    ._chat_main {
+        height: 100vh;
+        position: fixed;
+        width: 100%;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        flex: 1 1;
+    }
+    ._chat_wrapper {
+        top: 0;
+        height: calc(100vh - 4px);
+        overflow: inherit;
+    }
+    ._chat_right {
+        height: calc(100vh - 30px);
+    }
+    ._chat_right_bottom_inner {
+        border-top: 1px solid #E5E5E5;
+        padding: 12px 12px 40px;
+    }
+    ._chat_right_top_inner {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 10px;
+    }
+    ._border1 {
+        display: none;
+    }
+    ._chat_active_inner ._chat_left_inner_box_date_txt {
+        background: var(--color5);
+        color: var(--bg2);
+    }
+    ._chat_active_inner_bar {
+        display: none;
+    }
+    ._chat_active_inner {
+        background: transparent;
+    }
+    ._chat_active_inner ._chat_left_inner_box_txt_title {
+        color: var(--color2);
+    }
+    ._chat_active_inner ._chat_left_inner_box_txt_para {
+        color: var(--color2);
+        opacity: 0.7;
+    }
+    ._chat_active_inner ._chat_left_inner_box_date_para {
+        color: var(--color2);
+        opacity: 0.7;
+    }
+    /*---- Chat Css ----*/
+    ._req_img {
+        max-width: 100%;
+    }
+    ._request_card_content {
+        margin:0 0 20px;
+    }
+    ._request_wrappper {
+        padding: 100px 0 70px 0;
+    }
+    /*---- Notification mobile ----*/
+    ._notifications_mobile  {
+        display: block;
+    }
+    ._notifications_mobile ._notification_dropdown {
+        width: 100%;
+        position: inherit;
+        left: inherit;
+        top: inherit;
+        height: 100%;
+        visibility: visible;
+        opacity:1;
+    }
+}
+/*Dekstop*/
+@media only screen and (min-width:1500px) and (max-width: 1700px){
+    ._shape_three {
+        right: 226px;
+        width: 400px;
+    }
+} 
+@media only screen and (min-width:1200px) and (max-width: 1499px){
+    ._shape_three {
+        right: 0;
+        width: 494px;
+    }
+    ._shape_one {
+        width: 150px;
+    }
+    ._shape_two {
+        width: 450px;
+    }
+} 
+@media(max-width:1199px) {
+    ._notification_dropdown {
+        left: -177px;
+    }
+    ._right_inner_area_info_box_txt {
+        width: 100%;
+    }
+    ._header_nav_profile_image {
+        flex: 0 0 24px;
+    }
+    /*--- Login Css -----*/
+    ._social_login_content_btn span {
+        font-size: 13px;
+    }
+    ._social_login_content_bottom_txt::before {
+        width: 85px;
+    }
+    ._social_login_content_bottom_txt::after {
+        width: 85px;
+    }
+    ._social_login_form_left_para {
+        margin: 0 0 0 8px !important;
+    }
+    ._btn1 {
+        padding: 12px 56px !important;
+    }
+    /*--- Registration Css -----*/
+    ._social_registration_content_btn span {
+        font-size: 13px;
+    }
+    ._social_registration_content_bottom_txt::before {
+        width: 85px;
+    }
+    ._social_registration_content_bottom_txt::after {
+        width: 85px;
+    }
+    ._social_registration_form_left_para {
+        margin: 0 0 0 8px !important;
+    }
+    ._shape_three {
+        right: 0;
+        width: 494px;
+    }
+    ._shape_one {
+        width: 150px;
+    }
+    ._shape_two {
+        width: 450px;
+    }
+    /*--- Feed Css -----*/
+    ._left_inner_area_explore_link {
+        font-size: 12px;
+    }
+    ._text1 {
+        max-width: 74%;
+    }
+    /*---Profile css ------*/
+    ._left_inner_area_explore_link {
+        font-size: 11px !important;
+    }
+    ._photo_img {
+        max-width: 50px !important;
+        height: 50px !important;
+    }
+    ._photo1_img {
+        max-width: 50px !important;
+        height: 50px !important;
+    }
+    /*---- Feed02 Css -------*/
+    ._slider_image_none {
+        display:none;
+    }
+    ._header_nav_light_image {
+        padding: 0;
+    }
+    ._top_inner_content_area {
+        flex-wrap: wrap;
+    }
+    ._top_inner_content_area_group_box {
+        margin: 20px 0 0 -16px;
+    }
+    ::-webkit-scrollbar {
+        display: none;
+    }
+    ._layout_right_sidebar_group_list {
+        overflow: auto;
+    }
+    ._layout_right_sidebar_group_link {
+        font-size: 14px;
+    }
+    ._layout_left_about_inner_info_para {
+        font-size: 14px;
+    }
+    ._layout_left_about_inner_info_title {
+        font-size: 14px;
+    }
+    ._layout_right_recommend_inner_info_box {
+        margin: 0 0 10px 0;
+    }
+    ._top_inner_content_area_right {
+        margin: 20px 0 0 0;
+    }
+    /*--- Chat Css ----- */
+    ._chat_box {
+        justify-content: space-between;
+    }
+    ._chat_middle_message {
+        max-width: 80%;
+    }
+    ._left_inner_area_friends {
+        margin: 0 -18px 16px -18px;
+    }
+    ._left_inner_area_friends_info_link {
+        width: fit-content;
+        padding: 0 5px;
+        font-size: 10px;
+    }
+    ._top_inner_content_area_right1 {
+        margin: 0;
+    }
+    ._margin0 {
+        margin:0;
+    }
+    ._chat_textarea {
+        width: 100% !important;
+    }
+} 
+@media only screen and (min-width:992px) and (max-width: 1199px) {
+    ._custom_container {
+        max-width: 1160px;
+    }
+    /*--- Feed Css -----*/
+    ._title5 {
+        font-size: 13px !important;
+    }    
+    ._left_inner_area_suggest_info_box {
+        align-items: flex-start;
+        margin:0 0 10px 0;
+    }
+    ._title5{
+        font-size: 13px;
+    }
+    ._right_info_btn_grp {
+        height: 40px;
+    }
+    ._right_info_btn_link {
+        padding: 0 !important;
+        flex: 1 1;
+    }
+    ._feed_inner_text_area_bottom {
+        justify-content: space-between;
+        flex-wrap: wrap;
+        height: auto;
+    }
+    ._feed_inner_text_area_item {
+        flex: 1 1 auto;
+        width: 100%;
+        justify-content: space-evenly;
+        margin: 0 0 20px 0;
+    }
+    ._feed_inner_text_area_btn {
+        width: 100%;
+    }
+    ._feed_inner_text_area_btn_link {
+        width: 100%;
+    }
+    ._feed_inner_text_area_bottom {
+        padding: 12px 5px 8px 5px !important;
+    }
+    ._right_inner_area_info_box_title {
+        font-size: 13px !important;
+    }
+    ._right_inner_area_info_box_para {
+        font-size: 10px !important;
+    }
+    ._feed_right_inner_area_card_ppl_box {
+        width: 100%;
+        margin: 0 0 10px 0;
+    }
+    ._feed_right_inner_area_card_ppl_side span {
+        display: block;
+        line-height: 1.1;
+    }
+    ._left_inner_area_suggest_info_link {
+        text-align: center;
+        width: 100%;
+    }
+    ._feed_right_inner_area_card_ppl_inactive {
+        flex-wrap: wrap;
+    }
+    ._feed_right_inner_area_card_ppl_title {
+        font-size: 12px;
+    }
+    ._feed_right_inner_area_card_form_inpt::placeholder{
+        font-size: 12px;
+    }
+    ._feed_right_inner_area_card_form_inpt {
+        padding: 7px 0 7px 38px;
+    }
+    ._header_nav_item {
+        margin: 0 -2px;
+    }
+    /*----- Discover Event Css  --------*/
+    ._discover_event_inner_card_date span {
+        font-size: 10px;
+    }
+    ._discover_event_inner_card_details {
+        flex-direction: column;
+    }
+    ._discover_event_inner_card_details1 {
+        margin: 0 0 6px 0;
+    }
+    ._top_profile_img {
+        height: 204px;
+    }
+}
+@media (max-width:1399px) {
+    ._layout_mode_swithing_btn {
+        right: -50px;
+    }
+    /*--- Login Css -----*/
+    ._social_login_content_title {
+        font-size: 22px;
+    }
+    ._social_login_form_left_para {
+        font-size: 12px;
+        margin: 5px 0 0 8px;
+    }
+    ._social_login_form_check_label {
+        font-size: 12px;
+    }
+    ._btn1 {
+        padding: 12px 88px;
+    }
+    /*--- Registration Css -----*/
+    ._social_registration_bottom_txt_para {
+        font-size: 11px;
+    }
+    ._social_registration_content_title {
+        font-size: 22px;
+    }
+    ._social_registration_form_left_para {
+        font-size: 12px;
+        margin: 5px 0 0 8px;
+    }
+    ._social_registration_form_check_label {
+        font-size: 12px;
+    }
+    ._social_registration_bottom_txt_para {
+        font-size: 11px;
+    }
+    /*--- Feed Css -----*/
+    ._left_inner_area_suggest_info_title {
+        font-size: 11px;
+    }
+    ._left_inner_event_card_title {
+        font-size: 13px;
+    }
+    ._right_inner_area_info_box_title {
+        font-size: 14px;
+    }
+    ._right_inner_area_info_box_para {
+        font-size: 11px;
+    }
+    ._feed_inner_text_area_bottom {
+        padding: 0 5px;
+    }
+    ._right_info_btn_link {
+        padding: 9px 22px;
+    }
+    ._title5 {
+        font-size: 15px;
+    }
+    /*----- Discover Event Css  --------*/
+    ._discover_event_inner_card_date span {
+        font-size: 13px;
+    }
+    ._discover_event_inner_card_title {
+        font-size: 15px;
+    }
+    ._discover_event_inner_card_details1 span {
+        font-size: 12px;
+    }
+    ._discover_event_inner_card_details2 span {
+        font-size: 12px;
+    }
+    /*----- Profile Css ------*/
+    ._left_inner_area_explore_link {
+        font-size: 14px;
+    }
+    ._photo_img {
+        max-width: 60px;
+        height: 60px;
+    }
+    ._photo1_img {
+        max-width: 60px;
+        height: 60px;
+    }
+    ._top_inner_content_area_right {
+        display: flex;
+        align-items: center;
+    }
+    /*----Group Single CSS -----*/
+    ._top_inner_content_area_txt_title {
+        font-size: 20px;
+    }
+    ._top_inner_content_area_txt_para {
+        font-size: 12px;
+    }
+    /*---- Chat Css ---*/
+    ._chat_textarea {
+        width: 470px;
+    }
+    ._feed_right_inner_area_card_ppl_box {
+        width: 100%;
+    }
+}
+@media(min-width:1400px) and (max-width:1540px) {
+    ._layout_mode_swithing_btn {
+        right: -50px;
+    }
+}
+  
