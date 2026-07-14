@@ -1,27 +1,17 @@
 import { betterAuth } from "better-auth";
-import { memoryAdapter } from "better-auth/adapters/memory";
+import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { nextCookies } from "better-auth/next-js";
-
-// Persist the in-memory store across Next.js dev hot-reloads.
-// The memory adapter throws if it is asked to read a model before it exists,
-// so we pre-seed the core tables as empty arrays.
-const globalForDb = globalThis as unknown as {
-  memoryDB?: Record<string, unknown[]>;
-};
-const memoryDB =
-  globalForDb.memoryDB ??
-  (globalForDb.memoryDB = {
-    user: [],
-    session: [],
-    account: [],
-    verification: [],
-    rateLimit: [],
-  });
+import { db } from "@/db";
+import * as schema from "@/db/schema";
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL,
   secret: process.env.BETTER_AUTH_SECRET,
-  database: memoryAdapter(memoryDB),
+  database: drizzleAdapter(db, {
+    provider: "pg",
+    schema,
+    usePlural: true,
+  }),
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 8,

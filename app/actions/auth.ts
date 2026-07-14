@@ -1,6 +1,7 @@
 "use server";
 
 import { auth } from "@/lib/auth";
+import { signInSchema, signUpSchema } from "@/lib/validations";
 import { APIError } from "better-auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -13,30 +14,33 @@ export async function signUpAction(
   _prev: AuthState,
   formData: FormData,
 ): Promise<AuthState> {
-  const firstName = String(formData.get("firstName") ?? "").trim();
-  const lastName = String(formData.get("lastName") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
-  const confirmPassword = String(formData.get("confirmPassword") ?? "");
+  const payload = {
+    firstName: String(formData.get("firstName") ?? "").trim(),
+    lastName: String(formData.get("lastName") ?? "").trim(),
+    email: String(formData.get("email") ?? "").trim(),
+    password: String(formData.get("password") ?? ""),
+    confirmPassword: String(formData.get("confirmPassword") ?? ""),
+  };
 
-  if (!firstName || !lastName || !email || !password) {
-    return { error: "All fields are required." };
-  }
-  if (password.length < 8) {
-    return { error: "Password must be at least 8 characters." };
-  }
-  if (password !== confirmPassword) {
-    return { error: "Passwords do not match." };
+  const parsed = signUpSchema.safeParse(payload);
+
+  if (!parsed.success) {
+    return {
+      error:
+        parsed.error.flatten().fieldErrors["confirmPassword"]?.[0] ??
+        parsed.error.flatten().fieldErrors.email?.[0] ??
+        "Please check the form values and try again.",
+    };
   }
 
   try {
     await auth.api.signUpEmail({
       body: {
-        email,
-        password,
-        name: `${firstName} ${lastName}`,
-        firstName,
-        lastName,
+        email: parsed.data.email,
+        password: parsed.data.password,
+        name: `${parsed.data.firstName} ${parsed.data.lastName}`,
+        firstName: parsed.data.firstName,
+        lastName: parsed.data.lastName,
       },
       headers: await headers(),
     });
@@ -51,16 +55,24 @@ export async function signInAction(
   _prev: AuthState,
   formData: FormData,
 ): Promise<AuthState> {
-  const email = String(formData.get("email") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
+  const payload = {
+    email: String(formData.get("email") ?? "").trim(),
+    password: String(formData.get("password") ?? ""),
+  };
 
-  if (!email || !password) {
-    return { error: "Email and password are required." };
+  const parsed = signInSchema.safeParse(payload);
+
+  if (!parsed.success) {
+    return {
+      error:
+        parsed.error.flatten().fieldErrors.email?.[0] ??
+        "Please enter a valid email and password.",
+    };
   }
 
   try {
     await auth.api.signInEmail({
-      body: { email, password },
+      body: { email: parsed.data.email, password: parsed.data.password },
       headers: await headers(),
     });
   } catch (error) {

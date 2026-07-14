@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { createPost } from "@/actions/posts";
 import { authClient } from "@/lib/auth-client";
+import { useAuthStore } from "@/store/auth-store";
+import { useFeedStore } from "@/store/feed-store";
 import { useUser } from "./user-context";
 
 export default function FeedPage() {
@@ -12,6 +15,33 @@ export default function FeedPage() {
   const userName = user
     ? `${user.firstName} ${user.lastName}`.trim()
     : "User";
+  const setAuthUser = useAuthStore((state) => state.setUser);
+  const setFeedPosts = useFeedStore((state) => state.setPosts);
+  const setFeedLoading = useFeedStore((state) => state.setLoading);
+
+  useEffect(() => {
+    setAuthUser(user ?? null);
+  }, [setAuthUser, user]);
+
+  useEffect(() => {
+    const loadFeed = async () => {
+      setFeedLoading(true);
+      try {
+        const response = await fetch("/api/feed");
+        if (!response.ok) {
+          throw new Error("Failed to load feed");
+        }
+        const data = await response.json();
+        setFeedPosts(data.posts ?? []);
+      } catch {
+        setFeedPosts([]);
+      } finally {
+        setFeedLoading(false);
+      }
+    };
+
+    loadFeed();
+  }, [setFeedLoading, setFeedPosts]);
 
   const handleSignOut = async () => {
     await authClient.signOut();
@@ -1800,7 +1830,7 @@ export default function FeedPage() {
                         </div>
                       </div>
                       {/*For Mobile End*/}
-                      <div className="_feed_inner_text_area  _b_radious6 _padd_b24 _padd_t24 _padd_r24 _padd_l24 _mar_b16">
+                      <form action={createPost} className="_feed_inner_text_area  _b_radious6 _padd_b24 _padd_t24 _padd_r24 _padd_l24 _mar_b16">
                         <div className="_feed_inner_text_area_box">
                           <div className="_feed_inner_text_area_box_image">
                             <img
@@ -1814,6 +1844,7 @@ export default function FeedPage() {
                               className="form-control _textarea"
                               placeholder="Leave a comment here"
                               id="floatingTextarea"
+                              name="content"
                             ></textarea>
                             <label
                               className="_feed_textarea_label"

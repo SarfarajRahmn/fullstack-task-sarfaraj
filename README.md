@@ -1,4 +1,4 @@
-# Fullstack Task — Social Feed (Next.js 15 + Better Auth)
+# Fullstack Task — Social Feed (Next.js 16 + Better Auth)
 
 A full-stack social feed application built on top of an existing converted HTML
 template. The UI (Login, Register, Feed) is already implemented and **must not
@@ -13,11 +13,11 @@ authentication, a database, state management, and business logic.
 ## Tech Stack
 
 ### Frontend
-- **Next.js 15** (App Router, Turbopack)
+- **Next.js 16** (App Router, Turbopack)
 - **React 19**
 - **TypeScript**
 - **Zustand** — client state (auth + feed)
-- **React Hook Form** — form state
+- **Next.js 16 native forms** — `<form>` with **Server Actions** + `useActionState` (no React Hook Form)
 - **Zod** — schema validation
 
 ### Authentication
@@ -290,8 +290,16 @@ All inputs validated server-side in `lib/validations.ts`:
 - `commentSchema` / `replySchema` — content
 - `uploadSchema` — file type / size
 
-Client-side validation (React Hook Form + Zod resolver) is for UX only;
-**the server is the source of truth.**
+### Forms (native Next.js 16)
+Forms use the **built-in Next.js 16 form model**, not React Hook Form:
+- A Server Action is passed to the native `<form action={...}>` element.
+- `useActionState(action, initialState)` drives submission and surfaces
+  server-returned errors (e.g. `AuthState { error }`).
+- Client feedback (required fields, `minLength`, `disabled` while
+  `isPending`) comes from native HTML constraints + the `useActionState`
+  pending flag — no extra form library.
+
+Client-side validation is for UX only; **the server is the source of truth.**
 
 ---
 
