@@ -1,7 +1,47 @@
 import { create } from "zustand";
 
-interface FeedPost {
+export interface Like {
   id: string;
+  userId: string;
+  postId?: string | null;
+  commentId?: string | null;
+  replyId?: string | null;
+}
+
+export interface Reply {
+  id: string;
+  commentId: string;
+  userId: string;
+  content: string;
+  createdAt: string;
+  user: {
+    id: string;
+    name: string;
+    firstName: string | null;
+    lastName: string | null;
+  };
+  likes: Like[];
+}
+
+export interface Comment {
+  id: string;
+  postId: string;
+  userId: string;
+  content: string;
+  createdAt: string;
+  user: {
+    id: string;
+    name: string;
+    firstName: string | null;
+    lastName: string | null;
+  };
+  likes: Like[];
+  replies: Reply[];
+}
+
+export interface FeedPost {
+  id: string;
+  userId: string;
   content: string | null;
   imageUrl: string | null;
   visibility: "PUBLIC" | "PRIVATE";
@@ -12,9 +52,9 @@ interface FeedPost {
     name: string;
     firstName: string | null;
     lastName: string | null;
-  };
-  likes: Array<{ id: string }>;
-  comments: Array<{ id: string }>;
+  } | null;
+  likes: Like[];
+  comments: Comment[];
 }
 
 interface FeedState {
@@ -23,6 +63,10 @@ interface FeedState {
   setPosts: (posts: FeedPost[]) => void;
   setLoading: (loading: boolean) => void;
   appendPost: (post: FeedPost) => void;
+  deletePostFromStore: (postId: string) => void;
+  togglePostLikeOptimistic: (postId: string, userId: string) => void;
+  toggleCommentLikeOptimistic: (postId: string, commentId: string, userId: string) => void;
+  toggleReplyLikeOptimistic: (postId: string, commentId: string, replyId: string, userId: string) => void;
 }
 
 export const useFeedStore = create<FeedState>((set) => ({
@@ -31,4 +75,57 @@ export const useFeedStore = create<FeedState>((set) => ({
   setPosts: (posts) => set({ posts }),
   setLoading: (loading) => set({ loading }),
   appendPost: (post) => set((state) => ({ posts: [post, ...state.posts] })),
+  deletePostFromStore: (postId) =>
+    set((state) => ({ posts: state.posts.filter((p) => p.id !== postId) })),
+  togglePostLikeOptimistic: (postId, userId) =>
+    set((state) => ({
+      posts: state.posts.map((post) => {
+        if (post.id !== postId) return post;
+        const exists = post.likes.some((l) => l.userId === userId);
+        const newLikes = exists
+          ? post.likes.filter((l) => l.userId !== userId)
+          : [...post.likes, { id: Math.random().toString(), userId, postId }];
+        return { ...post, likes: newLikes };
+      }),
+    })),
+  toggleCommentLikeOptimistic: (postId, commentId, userId) =>
+    set((state) => ({
+      posts: state.posts.map((post) => {
+        if (post.id !== postId) return post;
+        return {
+          ...post,
+          comments: post.comments.map((comment) => {
+            if (comment.id !== commentId) return comment;
+            const exists = comment.likes.some((l) => l.userId === userId);
+            const newLikes = exists
+              ? comment.likes.filter((l) => l.userId !== userId)
+              : [...comment.likes, { id: Math.random().toString(), userId, commentId }];
+            return { ...comment, likes: newLikes };
+          }),
+        };
+      }),
+    })),
+  toggleReplyLikeOptimistic: (postId, commentId, replyId, userId) =>
+    set((state) => ({
+      posts: state.posts.map((post) => {
+        if (post.id !== postId) return post;
+        return {
+          ...post,
+          comments: post.comments.map((comment) => {
+            if (comment.id !== commentId) return comment;
+            return {
+              ...comment,
+              replies: comment.replies.map((reply) => {
+                if (reply.id !== replyId) return reply;
+                const exists = reply.likes.some((l) => l.userId === userId);
+                const newLikes = exists
+                  ? reply.likes.filter((l) => l.userId !== userId)
+                  : [...reply.likes, { id: Math.random().toString(), userId, replyId }];
+                return { ...reply, likes: newLikes };
+              }),
+            };
+          }),
+        };
+      }),
+    })),
 }));

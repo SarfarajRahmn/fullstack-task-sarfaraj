@@ -2,13 +2,12 @@
 
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import { eq, desc, and, isNull, or, sql } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { db } from "@/db";
-import { comments, likes, posts, replies, users } from "@/db/schema";
+import { comments, likes, posts, replies } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { createPostSchema } from "@/lib/validations";
+import { createPostSchema, commentSchema, replySchema } from "@/lib/validations";
 import { saveUploadedFile } from "@/lib/upload";
 
 export async function createPost(formData: FormData) {
@@ -19,7 +18,7 @@ export async function createPost(formData: FormData) {
   }
 
   const payload = {
-    content: String(formData.get("content") ?? ""),
+    content: String(formData.get("content") ?? "").trim() || undefined,
     visibility: String(formData.get("visibility") ?? "PUBLIC"),
     image: formData.get("image"),
   };
@@ -39,8 +38,9 @@ export async function createPost(formData: FormData) {
     imageUrl = await saveUploadedFile(imageField);
   }
 
+  const newPostId = randomUUID();
   await db.insert(posts).values({
-    id: randomUUID(),
+    id: newPostId,
     userId: session.user.id,
     content: parsed.data.content ?? null,
     imageUrl,
@@ -48,65 +48,29 @@ export async function createPost(formData: FormData) {
   });
 
   revalidatePath("/feed");
-  redirect("/feed");
 }
 
-export async function getFeedPosts() {
+export async function deletePost(postId: string) {
   const session = await auth.api.getSession({ headers: await headers() });
 
   if (!session?.user) {
-    return [];
+    throw new Error("You must be signed in to delete a post.");
   }
 
-  const results = await db
-    .select({
-      post: posts,
-      author: {
-        id: users.id,
-        name: users.name,
-        firstName: users.firstName,
-        lastName: users.lastName,
-      },
-    })
-    .from(posts)
-    .leftJoin(users, eq(posts.userId, users.id))
-    .where(
-      or(eq(posts.visibility, "PUBLIC"), eq(posts.userId, session.user.id)),
-    )
-    .orderBy(desc(posts.createdAt));
+  const postRecord = await db.query.posts.findFirst({
+    where: eq(posts.id, postId),
+  });
 
-  const postIds = results.map((row) => row.post.id);
-
-  if (postIds.length === 0) {
-    return [];
+  if (!postRecord) {
+    throw new Error("Post not found.");
   }
 
-  const [likesResult, commentsResult] = await Promise.all([
-    db
-      .select({
-        postId: likes.postId,
-        id: likes.id,
-        userId: likes.userId,
-      })
-      .from(likes)
-      .where(sql`${likes.postId} IN ${postIds}`),
-    db
-      .select({
-        postId: comments.postId,
-        id: comments.id,
-      })
-      .from(comments)
-      .where(sql`${comments.postId} IN ${postIds}`),
-  ]);
+  if (postRecord.userId !== session.user.id) {
+    throw new Error("You are not authorized to delete this post.");
+  }
 
-  return results.map((row) => ({
-    ...row.post,
-    author: row.author,
-    likes: likesResult.filter((like) => like.postId === row.post.id),
-    comments: commentsResult.filter(
-      (comment) => comment.postId === row.post.id,
-    ),
-  }));
+  await db.delete(posts).where(eq(posts.id, postId));
+  revalidatePath("/feed");
 }
 
 export async function toggleLike(postId: string) {
@@ -134,6 +98,105 @@ export async function toggleLike(postId: string) {
       postId,
     });
   }
+
+  revalidatePath("/feed");
+}
+
+export async function toggleLikeComment(commentId: string) {
+  const session = await auth.api.getSession({ headers: await headers() });
+
+  if (!session?.user) {
+    throw new Error("You must be signed in to like comments.");
+  }
+
+  const existing = await db.query.likes.findFirst({
+    where: and(
+      eq(likes.commentId, commentId),
+      eq(likes.userId, session.user.id),
+      isNull(likes.replyId),
+    ),
+  });
+
+  if (existing) {
+    await db.delete(likes).where(eq(likes.id, existing.id));
+  } else {
+    await db.insert(likes).values({
+      id: randomUUID(),
+      userId: session.user.id,
+      commentId,
+    });
+  }
+
+  revalidatePath("/feed");
+}
+
+export async function toggleLikeReply(replyId: string) {
+  const session = await auth.api.getSession({ headers: await headers() });
+
+  if (!session?.user) {
+    throw new Error("You must be signed in to like replies.");
+  }
+
+  const existing = await db.query.likes.findFirst({
+    where: and(
+      eq(likes.replyId, replyId),
+      eq(likes.userId, session.user.id),
+    ),
+  });
+
+  if (existing) {
+    await db.delete(likes).where(eq(likes.id, existing.id));
+  } else {
+    await db.insert(likes).values({
+      id: randomUUID(),
+      userId: session.user.id,
+      replyId,
+    });
+  }
+
+  revalidatePath("/feed");
+}
+
+export async function commentPost(postId: string, content: string) {
+  const session = await auth.api.getSession({ headers: await headers() });
+
+  if (!session?.user) {
+    throw new Error("You must be signed in to comment.");
+  }
+
+  const parsed = commentSchema.safeParse({ postId, content });
+  if (!parsed.success) {
+    throw new Error(parsed.error.flatten().fieldErrors.content?.[0] ?? "Invalid comment content.");
+  }
+
+  await db.insert(comments).values({
+    id: randomUUID(),
+    postId: parsed.data.postId,
+    userId: session.user.id,
+    content: parsed.data.content,
+  });
+
+  revalidatePath("/feed");
+}
+
+export async function replyPost(commentId: string, content: string) {
+  const session = await auth.api.getSession({ headers: await headers() });
+
+  if (!session?.user) {
+    throw new Error("You must be signed in to reply.");
+  }
+
+  const parsed = replySchema.safeParse({ commentId, content });
+  if (!parsed.success) {
+    throw new Error(parsed.error.flatten().fieldErrors.content?.[0] ?? "Invalid reply content.");
+  }
+
+  await db.insert(replies).values({
+    id: randomUUID(),
+    commentId: parsed.data.commentId,
+    userId: session.user.id,
+    content: parsed.data.content,
+  });
 
   revalidatePath("/feed");
 }
