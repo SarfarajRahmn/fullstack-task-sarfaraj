@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo, useCallback } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   createPost,
@@ -10,11 +11,18 @@ import {
   toggleLikeReply,
   commentPost,
   replyPost,
+  deleteComment,
+  deleteReply,
+  searchPosts,
+  updateProfile,
 } from "@/actions/posts";
 import { authClient } from "@/lib/auth-client";
 import { useAuthStore } from "@/store/auth-store";
 import { useFeedStore } from "@/store/feed-store";
 import { useUser } from "./user-context";
+import LikersModal from "@/components/likers-modal";
+import TopNav from "@/components/topnav";
+import type { FeedPost } from "@/store/feed-store";
 
 function formatUserName(
   u?: { firstName?: string | null; lastName?: string | null } | null,
@@ -24,8 +32,9 @@ function formatUserName(
 }
 
 export default function FeedPage() {
-  const [isNotifyOpen, setIsNotifyOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const router = useRouter();
+  const toggleProfile = useCallback(() => setIsProfileOpen((prev) => !prev), []);
   const user = useUser();
   const userName = formatUserName(user);
   const setAuthUser = useAuthStore((state) => state.setUser);
@@ -48,6 +57,10 @@ export default function FeedPage() {
   const [visibility, setVisibility] = useState<"PUBLIC" | "PRIVATE">("PUBLIC");
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const selectedImagePreview = useMemo(
+    () => (selectedImage ? URL.createObjectURL(selectedImage) : null),
+    [selectedImage],
+  );
 
   // Comment and reply inputs
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>(
@@ -58,18 +71,54 @@ export default function FeedPage() {
     string | null
   >(null);
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<FeedPost[]>([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+
+  const [likersModal, setLikersModal] = useState<{
+    isOpen: boolean;
+    type: "post" | "comment" | "reply";
+    entityId: string;
+  }>({
+    isOpen: false,
+    type: "post",
+    entityId: "",
+  });
+
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [editFirstName, setEditFirstName] = useState("");
+  const [editLastName, setEditLastName] = useState("");
+  const [editImage, setEditImage] = useState<File | null>(null);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
+
+  const hasMore = useFeedStore((state) => state.hasMore);
+  const nextCursor = useFeedStore((state) => state.nextCursor);
+  const loadingMore = useFeedStore((state) => state.loadingMore);
+  const setHasMore = useFeedStore((state) => state.setHasMore);
+  const setNextCursor = useFeedStore((state) => state.setNextCursor);
+  const setLoadingMore = useFeedStore((state) => state.setLoadingMore);
+  const appendPosts = useFeedStore((state) => state.appendPosts);
+  const resetPagination = useFeedStore((state) => state.resetPagination);
+  const mergeNewPosts = useFeedStore((state) => state.mergeNewPosts);
+
   const loadFeed = async () => {
     try {
-      const response = await fetch("/api/feed");
+      const response = await fetch("/api/feed?limit=10");
       if (!response.ok) {
         throw new Error("Failed to load feed");
       }
       const data = await response.json();
       setFeedPosts(data.posts ?? []);
+      setHasMore(data.hasMore ?? false);
+      setNextCursor(data.nextCursor ?? null);
     } catch {
       setFeedPosts([]);
+      setHasMore(false);
+      setNextCursor(null);
     } finally {
       setFeedLoading(false);
+      resetPagination();
     }
   };
 
@@ -81,6 +130,32 @@ export default function FeedPage() {
     setFeedLoading(true);
     loadFeed();
   }, [setFeedLoading, setFeedPosts]);
+
+  // Live feed: poll for posts newer than the current newest post.
+  useEffect(() => {
+    const POLL_INTERVAL_MS = 15000;
+
+    const poll = async () => {
+      try {
+        const current = useFeedStore.getState().posts;
+        if (current.length === 0) return;
+        const newest = current[0]?.createdAt;
+        const url = newest
+          ? `/api/feed?since=${encodeURIComponent(newest)}`
+          : "/api/feed?limit=10";
+        const response = await fetch(url);
+        if (!response.ok) return;
+        const data = await response.json();
+        const incoming: FeedPost[] = data.posts ?? [];
+        if (incoming.length > 0) mergeNewPosts(incoming);
+      } catch {
+        // ignore transient network errors during polling
+      }
+    };
+
+    const interval = setInterval(poll, POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [mergeNewPosts]);
 
   const handleSignOut = async () => {
     await authClient.signOut();
@@ -184,13 +259,135 @@ export default function FeedPage() {
     }
   };
 
+  const handleLoadMore = async () => {
+    if (!nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const response = await fetch(
+        `/api/feed?cursor=${encodeURIComponent(nextCursor)}&limit=10`,
+      );
+      if (!response.ok) throw new Error("Failed to load more");
+      const data = await response.json();
+      appendPosts(data.posts ?? []);
+      setHasMore(data.hasMore ?? false);
+      setNextCursor(data.nextCursor ?? null);
+    } catch {
+      // silently fail for now
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+    setSearchLoading(true);
+    try {
+      const results = await searchPosts(searchQuery);
+      setSearchResults(results);
+      setShowSearchResults(true);
+    } catch {
+      setSearchResults([]);
+      setShowSearchResults(false);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const handleDeleteComment = async (postId: string, commentId: string) => {
+    if (!confirm("Are you sure you want to delete this comment?")) return;
+    try {
+      await deleteComment(commentId);
+      await loadFeed();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Could not delete comment.");
+    }
+  };
+
+  const handleDeleteReply = async (
+    postId: string,
+    commentId: string,
+    replyId: string,
+  ) => {
+    if (!confirm("Are you sure you want to delete this reply?")) return;
+    try {
+      await deleteReply(replyId);
+      await loadFeed();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Could not delete reply.");
+    }
+  };
+
+  const handleShowLikers = (
+    type: "post" | "comment" | "reply",
+    entityId: string,
+  ) => {
+    setLikersModal({ isOpen: true, type, entityId });
+  };
+
+  const handleCloseLikers = () => {
+    setLikersModal({ isOpen: false, type: "post", entityId: "" });
+  };
+
+  const handleToggleDarkMode = () => {
+    document.documentElement.classList.toggle("dark");
+  };
+
+  const handleOpenEditProfile = () => {
+    if (user) {
+      setEditFirstName(user.firstName || "");
+      setEditLastName(user.lastName || "");
+      setEditImage(null);
+    }
+    setShowEditProfile(true);
+  };
+
+  const handleCloseEditProfile = () => {
+    setShowEditProfile(false);
+    setEditFirstName("");
+    setEditLastName("");
+    setEditImage(null);
+  };
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editFirstName.trim() && !editLastName.trim() && !editImage) {
+      handleCloseEditProfile();
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("firstName", editFirstName);
+    formData.append("lastName", editLastName);
+    if (editImage) {
+      formData.append("image", editImage);
+    }
+
+    try {
+      const updated = await updateProfile(formData);
+      setAuthUser(updated);
+      handleCloseEditProfile();
+      await loadFeed();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Could not update profile.");
+    }
+  };
+
   return (
     <>
       {/*Feed Section Start*/}
       <div className="_layout _layout_main_wrapper">
         {/*Switching Btn Start*/}
         <div className="_layout_mode_swithing_btn">
-          <button type="button" className="_layout_swithing_btn_link">
+          <button
+            type="button"
+            className="_layout_swithing_btn_link"
+            onClick={handleToggleDarkMode}
+          >
             <div className="_layout_swithing_btn">
               <div className="_layout_swithing_btn_round"></div>
             </div>
@@ -234,286 +431,17 @@ export default function FeedPage() {
         </div>
         {/*Switching Btn End*/}
         <div className="_main_layout">
-          {/*Desktop Menu Start*/}
-          <nav className="navbar navbar-expand-lg navbar-light _header_nav _padd_t10">
-            <div className="container _custom_container">
-              <div className="_logo_wrap">
-                <a className="navbar-brand" href="/feed">
-                  <img
-                    src="/assets/images/logo.svg"
-                    alt="Image"
-                    className="_nav_logo"
-                  />
-                </a>
-              </div>
-              <button
-                className="navbar-toggler bg-light"
-                type="button"
-                data-bs-toggle="collapse"
-                data-bs-target="#navbarSupportedContent"
-                aria-controls="navbarSupportedContent"
-                aria-expanded="false"
-                aria-label="Toggle navigation"
-              >
-                {" "}
-                <span className="navbar-toggler-icon"></span>
-              </button>
-              <div
-                className="collapse navbar-collapse"
-                id="navbarSupportedContent"
-              >
-                <div className="_header_form ms-auto">
-                  <form className="_header_form_grp">
-                    <svg
-                      className="_header_form_svg"
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="17"
-                      height="17"
-                      fill="none"
-                      viewBox="0 0 17 17"
-                    >
-                      <circle cx="7" cy="7" r="6" stroke="#666"></circle>
-                      <path
-                        stroke="#666"
-                        strokeLinecap="round"
-                        d="M16 16l-3-3"
-                      ></path>
-                    </svg>
-                    <input
-                      className="form-control me-2 _inpt1"
-                      type="search"
-                      placeholder="input search text"
-                      aria-label="Search"
-                    />
-                  </form>
-                </div>
-                <ul className="navbar-nav mb-2 mb-lg-0 _header_nav_list ms-auto _mar_r8">
-                  <li className="nav-item _header_nav_item">
-                    <a
-                      className="nav-link _header_nav_link_active _header_nav_link"
-                      aria-current="page"
-                      href="/feed"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="18"
-                        height="21"
-                        fill="none"
-                        viewBox="0 0 18 21"
-                      >
-                        <path
-                          className="_home_active"
-                          stroke="#000"
-                          strokeWidth="1.5"
-                          strokeOpacity=".6"
-                          d="M1 9.924c0-1.552 0-2.328.314-3.01.313-.682.902-1.187 2.08-2.196l1.143-.98C6.667 1.913 7.732 1 9 1c1.268 0 2.333.913 4.463 2.738l1.142.98c1.179 1.01 1.768 1.514 2.081 2.196.314.682.314 1.458.314 3.01v4.846c0 2.155 0 3.233-.67 3.902-.669.67-1.746.67-3.901.67H5.57c-2.155 0-3.232 0-3.902-.67C1 18.002 1 16.925 1 14.77V9.924z"
-                        ></path>
-                        <path
-                          className="_home_active"
-                          stroke="#000"
-                          strokeOpacity=".6"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="1.5"
-                          d="M11.857 19.341v-5.857a1 1 0 00-1-1H7.143a1 1 0 00-1 1v5.857"
-                        ></path>
-                      </svg>
-                    </a>
-                  </li>
-                  <li className="nav-item _header_nav_item">
-                    <a
-                      className="nav-link _header_nav_link"
-                      aria-current="page"
-                      href="#0"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="26"
-                        height="20"
-                        fill="none"
-                        viewBox="0 0 26 20"
-                      >
-                        <path
-                          fill="#000"
-                          fillOpacity=".6"
-                          fillRule="evenodd"
-                          d="M12.79 12.15h.429c2.268.015 7.45.243 7.45 3.732 0 3.466-5.002 3.692-7.415 3.707h-.894c-2.268-.015-7.452-.243-7.452-3.727 0-3.47 5.184-3.697 7.452-3.711l.297-.001h.132zm0 1.75c-2.792 0-6.12.34-6.12 1.962 0 1.585 3.13 1.955 5.864 1.976l.255.002c2.792 0 6.118-.34 6.118-1.958 0-1.638-3.326-1.982-6.118-1.982zm9.343-2.224c2.846.424 3.444 1.751 3.444 2.79 0 .636-.251 1.794-1.931 2.43a.882.882 0 01-1.137-.506.873.873 0 01.51-1.13c.796-.3.796-.633.796-.793 0-.511-.654-.868-1.944-1.06a.878.878 0 01-.741-.996.886.886 0 011.003-.735zm-17.685.735a.878.878 0 01-.742.997c-1.29.19-1.944.548-1.944 1.059 0 .16 0 .491.798.793a.873.873 0 01-.314 1.693.897.897 0 01-.313-.057C.25 16.259 0 15.1 0 14.466c0-1.037.598-2.366 3.446-2.79.485-.06.929.257 1.002.735zM12.789 0c2.96 0 5.368 2.392 5.368 5.33 0 2.94-2.407 5.331-5.368 5.331h-.031a5.329 5.329 0 01-3.782-1.57 5.253 5.253 0 01-1.553-3.764C7.423 2.392 9.83 0 12.789 0zm0 1.75c-1.987 0-3.604 1.607-3.604 3.58a3.526 3.526 0 001.04 2.527 3.58 3.58 0 002.535 1.054l.03.875v-.875c1.987 0 3.605-1.605 3.605-3.58S14.777 1.75 12.789 1.75zm7.27-.607a4.222 4.222 0 013.566 4.172c-.004 2.094-1.58 3.89-3.665 4.181a.88.88 0 01-.994-.745.875.875 0 01.75-.989 2.494 2.494 0 002.147-2.45 2.473 2.473 0 00-2.09-2.443.876.876 0 01-.726-1.005.881.881 0 011.013-.721zm-13.528.72a.876.876 0 01-.726 1.006 2.474 2.474 0 00-2.09 2.446A2.493 2.493 0 005.86 7.762a.875.875 0 11-.243 1.734c-2.085-.29-3.66-2.087-3.664-4.179 0-2.082 1.5-3.837 3.566-4.174a.876.876 0 011.012.72z"
-                          clipRule="evenodd"
-                        ></path>
-                      </svg>
-                    </a>
-                  </li>
-                  <li className="nav-item _header_nav_item">
-                    <span
-                      id="_notify_btn"
-                      className="nav-link _header_nav_link _header_notify_btn"
-                      onClick={() => setIsNotifyOpen((prev) => !prev)}
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="20"
-                        height="22"
-                        fill="none"
-                        viewBox="0 0 20 22"
-                      >
-                        <path
-                          fill="#000"
-                          fillOpacity=".6"
-                          fillRule="evenodd"
-                          d="M7.547 19.55c.533.59 1.218.915 1.93.915.714 0 1.403-.324 1.938-.916a.777.777 0 011.09-.056c.318.284.344.77.058 1.084-.832.917-1.927 1.423-3.086 1.423h-.002c-1.155-.001-2.248-.506-3.077-1.424a.762.762 0 01.057-1.083.774.774 0 011.092.057zM9.527 0c4.58 0 7.657 3.543 7.657 6.85 0 1.702.436 2.424.899 3.19.457.754.976 1.612.976 3.233-.36 4.14-4.713 4.478-9.531 4.478-4.818 0-9.172-.337-9.528-4.413-.003-1.686.515-2.544.973-3.299l.161-.27c.398-.679.737-1.417.737-2.918C1.871 3.543 4.948 0 9.528 0zm0 1.535c-3.6 0-6.11 2.802-6.11 5.316 0 2.127-.595 3.11-1.12 3.978-.422.697-.755 1.247-.755 2.444.173 1.93 1.455 2.944 7.986 2.944 6.494 0 7.817-1.06 7.988-3.01-.003-1.13-.336-1.681-.757-2.378-.526-.868-1.12-1.851-1.12-3.978 0-2.514-2.51-5.316-6.111-5.316z"
-                          clipRule="evenodd"
-                        ></path>
-                      </svg>
-                      <span className="_counting">0</span>
-                    </span>
-                  </li>
-                  <li className="nav-item _header_nav_item">
-                    <a
-                      className="nav-link _header_nav_link"
-                      aria-current="page"
-                      href="#0"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="23"
-                        height="22"
-                        fill="none"
-                        viewBox="0 0 23 22"
-                      >
-                        <path
-                          fill="#000"
-                          fillOpacity=".6"
-                          fillRule="evenodd"
-                          d="M11.43 0c2.96 0 5.743 1.143 7.833 3.22 4.32 4.29 4.32 11.271 0 15.562C17.145 20.886 14.293 22 11.405 22c-1.575 0-3.16-.33-4.643-1.012-.437-.174-.847-.338-1.14-.338-.338.002-.793.158-1.232.308-.9.307-2.022.69-2.852-.131-.826-.822-.445-1.932-.138-2.826.152-.44.307-.895.307-1.239 0-.282-.137-.642-.347-1.161C-.57 11.46.322 6.47 3.596 3.22A11.04 11.04 0 0111.43 0zm0 1.535A9.5 9.5 0 004.69 4.307a9.463 9.463 0 00-1.91 10.686c.241.592.474 1.17.474 1.77 0 .598-.207 1.201-.39 1.733-.15.439-.378 1.1-.231 1.245.143.147.813-.085 1.255-.235.53-.18 1.133-.387 1.73-.391.597 0 1.161.225 1.758.463 3.655 1.679 7.98.915 10.796-1.881 3.716-3.693 3.716-9.7 0-13.391a9.5 9.5 0 00-6.74-2.77zm4.068 8.867c.57 0 1.03.458 1.03 1.024 0 .566-.46 1.023-1.03 1.023a1.023 1.023 0 11-.01-2.047h.01zm-4.131 0c.568 0 1.03.458 1.03 1.024 0 .566-.462 1.023-1.03 1.023a1.03 1.03 0 01-1.035-1.024c0-.566.455-1.023 1.025-1.023h.01zm-4.132 0c.568 0 1.03.458 1.03 1.024 0 .566-.462 1.023-1.03 1.023a1.022 1.022 0 11-.01-2.047h.01z"
-                          clipRule="evenodd"
-                        ></path>
-                      </svg>{" "}
-                      <span className="_counting">0</span>
-                    </a>
-                  </li>
-                </ul>
-                <div className="_header_nav_profile">
-                  <div className="_header_nav_profile_image">
-                    <img
-                      src="/assets/images/profile.png"
-                      alt="Image"
-                      className="_nav_profile_img"
-                    />
-                  </div>
-                  <div className="_header_nav_dropdown">
-                    <p className="_header_nav_para">{userName}</p>
-                    <button
-                      id="_profile_drop_show_btn"
-                      className="_header_nav_dropdown_btn _dropdown_toggle"
-                      type="button"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="10"
-                        height="6"
-                        fill="none"
-                        viewBox="0 0 10 6"
-                      >
-                        <path
-                          fill="#112032"
-                          d="M5 5l.354.354L5 5.707l-.354-.353L5 5zm4.354-3.646l-4 4-.708-.708 4-4 .708.708zm-4.708 4l-4-4 .708-.708 4 4-.708.708z"
-                        ></path>
-                      </svg>
-                    </button>
-                  </div>
-                  {/* dropdown */}
-                  <div
-                    id="_prfoile_drop"
-                    className="_nav_profile_dropdown _profile_dropdown"
-                  >
-                    <div className="_nav_profile_dropdown_info">
-                      <div className="_nav_profile_dropdown_image">
-                        <img
-                          src="/assets/images/profile.png"
-                          alt="Image"
-                          className="_nav_drop_img"
-                        />
-                      </div>
-                      <div className="_nav_profile_dropdown_info_txt">
-                        <h4 className="_nav_dropdown_title">{userName}</h4>
-                        <a href="#0" className="_nav_drop_profile">
-                          View Profile
-                        </a>
-                      </div>
-                    </div>
-                    <hr />
-                    <ul className="_nav_dropdown_list">
-                      <li className="_nav_dropdown_list_item">
-                        <a href="#0" className="_nav_dropdown_link">
-                          <div className="_nav_drop_info">
-                            <span>
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="18"
-                                height="19"
-                                fill="none"
-                                viewBox="0 0 18 19"
-                              >
-                                <path
-                                  fill="#377DFF"
-                                  d="M9.584 0c.671 0 1.315.267 1.783.74.468.473.721 1.112.7 1.709l.009.14a.985.985 0 00.136.395c.145.242.382.418.659.488.276.071.57.03.849-.13l.155-.078c1.165-.538 2.563-.11 3.21.991l.58.99a.695.695 0 01.04.081l.055.107c.519 1.089.15 2.385-.838 3.043l-.244.15a1.046 1.046 0 00-.313.339 1.042 1.042 0 00-.11.805c.074.272.255.504.53.66l.158.1c.478.328.823.812.973 1.367.17.626.08 1.292-.257 1.86l-.625 1.022-.094.144c-.735 1.038-2.16 1.355-3.248.738l-.129-.066a1.123 1.123 0 00-.412-.095 1.087 1.087 0 00-.766.31c-.204.2-.317.471-.316.786l-.008.163C11.956 18.022 10.88 19 9.584 19h-1.17c-1.373 0-2.486-1.093-2.484-2.398l-.008-.14a.994.994 0 00-.14-.401 1.066 1.066 0 00-.652-.493 1.12 1.12 0 00-.852.127l-.169.083a2.526 2.526 0 01-1.698.122 2.47 2.47 0 01-1.488-1.154l-.604-1.024-.08-.152a2.404 2.404 0 01.975-3.132l.1-.061c.292-.199.467-.527.467-.877 0-.381-.207-.733-.569-.94l-.147-.092a2.419 2.419 0 01-.724-3.236l.615-.993a2.503 2.503 0 013.366-.912l.126.066c.13.058.269.089.403.09a1.08 1.08 0 001.086-1.068l.008-.185c.049-.57.301-1.106.713-1.513A2.5 2.5 0 018.414 0h1.17zm0 1.375h-1.17c-.287 0-.562.113-.764.312-.179.177-.288.41-.308.628l-.012.29c-.098 1.262-1.172 2.253-2.486 2.253a2.475 2.475 0 01-1.013-.231l-.182-.095a1.1 1.1 0 00-1.488.407l-.616.993a1.05 1.05 0 00.296 1.392l.247.153A2.43 2.43 0 013.181 9.5c0 .802-.401 1.552-1.095 2.023l-.147.091c-.486.276-.674.873-.448 1.342l.053.102.597 1.01c.14.248.374.431.652.509.246.069.51.05.714-.04l.103-.05a2.506 2.506 0 011.882-.248 2.456 2.456 0 011.823 2.1l.02.335c.059.535.52.95 1.079.95h1.17c.566 0 1.036-.427 1.08-.95l.005-.104a2.412 2.412 0 01.726-1.732 2.508 2.508 0 011.779-.713c.331.009.658.082.992.23l.3.15c.469.202 1.026.054 1.309-.344l.068-.105.61-1a1.045 1.045 0 00-.288-1.383l-.257-.16a2.435 2.435 0 01-1.006-1.389 2.393 2.393 0 01.25-1.847c.181-.31.429-.575.752-.795l.152-.095c.485-.278.672-.875.448-1.346l-.067-.127-.012-.027-.554-.945a1.095 1.095 0 00-1.27-.487l-.105.041-.098.049a2.515 2.515 0 01-1.88.259 2.47 2.47 0 01-1.511-1.122 2.367 2.367 0 01-.325-.97l-.012-.24a1.056 1.056 0 00-.307-.774 1.096 1.096 0 00-.779-.323zm-.58 5.02c1.744 0 3.16 1.39 3.16 3.105s-1.416 3.105-3.16 3.105c-1.746 0-3.161-1.39-3.161-3.105s1.415-3.105 3.16-3.105zm0 1.376c-.973 0-1.761.774-1.761 1.729 0 .955.788 1.73 1.76 1.73s1.76-.775 1.76-1.73-.788-1.73-1.76-1.73z"
-                                ></path>
-                              </svg>
-                            </span>
-                            Settings
-                          </div>
-                          <span className="_nav_drop_btn_link">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="6"
-                              height="10"
-                              fill="none"
-                              viewBox="0 0 6 10"
-                            >
-                              <path
-                                fill="#112032"
-                                d="M5 5l.354.354L5.707 5l-.353-.354L5 5zM1.354 9.354l4-4-.708-.708-4 4 .708.708zm4-4.708l-4-4-.708.708 4 4 .708-.708z"
-                                opacity=".5"
-                              ></path>
-                            </svg>
-                          </span>
-                        </a>
-                      </li>
-                      <li className="_nav_dropdown_list_item">
-                        <button
-                          type="button"
-                          className="_nav_dropdown_link"
-                          onClick={handleSignOut}
-                        >
-                          <div className="_nav_drop_info">
-                            <span>
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="19"
-                                height="19"
-                                fill="none"
-                                viewBox="0 0 19 19"
-                              >
-                                <path
-                                  stroke="#377DFF"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth="1.5"
-                                  d="M6.667 18H2.889A1.889 1.889 0 011 16.111V2.89A1.889 1.889 0 012.889 1h3.778M13.277 14.222L18 9.5l-4.723-4.722M18 9.5H6.667"
-                                ></path>
-                              </svg>
-                            </span>
-                            Log Out
-                          </div>
-                        </button>
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </nav>
-          {/*Desktop Menu End*/}
+          <TopNav
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            onSearchSubmit={handleSearch}
+            userName={userName}
+            userImage={user?.image}
+            onOpenEditProfile={handleOpenEditProfile}
+            onSignOut={handleSignOut}
+            isProfileOpen={isProfileOpen}
+            onToggleProfile={toggleProfile}
+          />
           {/*Mobile Menu Start*/}
           <div className="_header_mobile_menu">
             <div className="_header_mobile_menu_wrap">
@@ -524,9 +452,11 @@ export default function FeedPage() {
                       <div className="_header_mobile_menu_top_inner">
                         <div className="_header_mobile_menu_logo">
                           <a href="/feed" className="_mobile_logo_link">
-                            <img
+                            <Image
                               src="/assets/images/logo.svg"
                               alt="Image"
+                              width={158}
+                              height={33}
                               className="_nav_logo"
                             />
                           </a>
@@ -783,9 +713,11 @@ export default function FeedPage() {
                         <div className="col-xl-3 col-lg-3 col-md-4 col-sm-4 col">
                           <div className="_feed_inner_profile_story _b_radious6">
                             <div className="_feed_inner_profile_story_image">
-                              <img
+                              <Image
                                 src="/assets/images/card_ppl1.png"
                                 alt="Image"
+                                width={300}
+                                height={330}
                                 className="_profile_story_img"
                               />
                               <div className="_feed_inner_story_txt">
@@ -816,9 +748,11 @@ export default function FeedPage() {
                         <div className="col-xl-3 col-lg-3 col-md-4 col-sm-4 col">
                           <div className="_feed_inner_public_story _b_radious6">
                             <div className="_feed_inner_public_story_image">
-                              <img
+                              <Image
                                 src="/assets/images/card_ppl2.png"
                                 alt="Image"
+                                width={300}
+                                height={330}
                                 className="_public_story_img"
                               />
                               <div className="_feed_inner_pulic_story_txt">
@@ -827,9 +761,11 @@ export default function FeedPage() {
                                 </p>
                               </div>
                               <div className="_feed_inner_public_mini">
-                                <img
+                                <Image
                                   src="/assets/images/mini_pic.png"
                                   alt="Image"
+                                  width={56}
+                                  height={56}
                                   className="_public_mini_img"
                                 />
                               </div>
@@ -839,9 +775,11 @@ export default function FeedPage() {
                         <div className="col-xl-3 col-lg-3 col-md-4 col-sm-4 _custom_mobile_none">
                           <div className="_feed_inner_public_story _b_radious6">
                             <div className="_feed_inner_public_story_image">
-                              <img
+                              <Image
                                 src="/assets/images/card_ppl3.png"
                                 alt="Image"
+                                width={300}
+                                height={330}
                                 className="_public_story_img"
                               />
                               <div className="_feed_inner_pulic_story_txt">
@@ -850,9 +788,11 @@ export default function FeedPage() {
                                 </p>
                               </div>
                               <div className="_feed_inner_public_mini">
-                                <img
+                                <Image
                                   src="/assets/images/mini_pic.png"
                                   alt="Image"
+                                  width={56}
+                                  height={56}
                                   className="_public_mini_img"
                                 />
                               </div>
@@ -862,9 +802,11 @@ export default function FeedPage() {
                         <div className="col-xl-3 col-lg-3 col-md-4 col-sm-4 _custom_none">
                           <div className="_feed_inner_public_story _b_radious6">
                             <div className="_feed_inner_public_story_image">
-                              <img
+                              <Image
                                 src="/assets/images/card_ppl4.png"
                                 alt="Image"
+                                width={300}
+                                height={330}
                                 className="_public_story_img"
                               />
                               <div className="_feed_inner_pulic_story_txt">
@@ -873,9 +815,11 @@ export default function FeedPage() {
                                 </p>
                               </div>
                               <div className="_feed_inner_public_mini">
-                                <img
+                                <Image
                                   src="/assets/images/mini_pic.png"
                                   alt="Image"
+                                  width={56}
+                                  height={56}
                                   className="_public_mini_img"
                                 />
                               </div>
@@ -895,9 +839,11 @@ export default function FeedPage() {
                               className="_feed_inner_ppl_card_area_link"
                             >
                               <div className="_feed_inner_ppl_card_area_story">
-                                <img
+                                <Image
                                   src="/assets/images/mobile_story_img.png"
                                   alt="Image"
+                                  width={120}
+                                  height={120}
                                   className="_card_story_img"
                                 />
                                 <div className="_feed_inner_ppl_btn">
@@ -933,9 +879,11 @@ export default function FeedPage() {
                               className="_feed_inner_ppl_card_area_link"
                             >
                               <div className="_feed_inner_ppl_card_area_story_active">
-                                <img
+                                <Image
                                   src="/assets/images/mobile_story_img1.png"
                                   alt="Image"
+                                  width={60}
+                                  height={60}
                                   className="_card_story_img1"
                                 />
                               </div>
@@ -950,9 +898,11 @@ export default function FeedPage() {
                               className="_feed_inner_ppl_card_area_link"
                             >
                               <div className="_feed_inner_ppl_card_area_story_inactive">
-                                <img
+                                <Image
                                   src="/assets/images/mobile_story_img2.png"
                                   alt="Image"
+                                  width={120}
+                                  height={120}
                                   className="_card_story_img1"
                                 />
                               </div>
@@ -967,9 +917,11 @@ export default function FeedPage() {
                               className="_feed_inner_ppl_card_area_link"
                             >
                               <div className="_feed_inner_ppl_card_area_story_active">
-                                <img
+                                <Image
                                   src="/assets/images/mobile_story_img1.png"
                                   alt="Image"
+                                  width={60}
+                                  height={60}
                                   className="_card_story_img1"
                                 />
                               </div>
@@ -984,9 +936,11 @@ export default function FeedPage() {
                               className="_feed_inner_ppl_card_area_link"
                             >
                               <div className="_feed_inner_ppl_card_area_story_inactive">
-                                <img
+                                <Image
                                   src="/assets/images/mobile_story_img2.png"
                                   alt="Image"
+                                  width={120}
+                                  height={120}
                                   className="_card_story_img1"
                                 />
                               </div>
@@ -1001,9 +955,11 @@ export default function FeedPage() {
                               className="_feed_inner_ppl_card_area_link"
                             >
                               <div className="_feed_inner_ppl_card_area_story">
-                                <img
+                                <Image
                                   src="/assets/images/mobile_story_img.png"
                                   alt="Image"
+                                  width={120}
+                                  height={120}
                                   className="_card_story_img"
                                 />
                               </div>
@@ -1020,11 +976,23 @@ export default function FeedPage() {
                       onSubmit={handlePostSubmit}
                       className="_feed_inner_text_area _b_radious6 _padd_b24 _padd_t24 _padd_r24 _padd_l24 _mar_b16"
                     >
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        style={{ display: "none" }}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] ?? null;
+                          setSelectedImage(file);
+                        }}
+                      />
                       <div className="_feed_inner_text_area_box">
                         <div className="_feed_inner_text_area_box_image">
-                          <img
+                          <Image
                             src="/assets/images/txt_img.png"
                             alt="Image"
+                            width={80}
+                            height={80}
                             className="_txt_img"
                           />
                         </div>
@@ -1059,11 +1027,23 @@ export default function FeedPage() {
                       </div>
 
                       {selectedImage && (
-                        <div className="mt-2 mb-2 text-muted small px-3 d-flex align-items-center justify-content-between bg-light p-2 rounded">
-                          <span>
-                            Selected image:{" "}
-                            <strong>{selectedImage.name}</strong>
-                          </span>
+                        <div className="mt-2 mb-2 px-3 d-flex align-items-center justify-content-between bg-light p-2 rounded">
+                          <div className="d-flex align-items-center gap-2">
+                            {selectedImagePreview && (
+                              <Image
+                                src={selectedImagePreview}
+                                alt={selectedImage.name}
+                                width={64}
+                                height={64}
+                                unoptimized
+                                className="rounded object-fit-cover"
+                                style={{ width: 64, height: 64 }}
+                              />
+                            )}
+                            <span className="text-muted small text-truncate">
+                              {selectedImage.name}
+                            </span>
+                          </div>
                           <button
                             type="button"
                             className="btn btn-sm btn-outline-danger"
@@ -1308,11 +1288,69 @@ export default function FeedPage() {
                           </div>
                         </div>
                       </div>
-                      {/*For Mobile*/}
-                    </form>
+                     {/*For Mobile*/}
+                     </form>
 
-                    {/* Loading State */}
-                    {loading && (
+                     {showSearchResults && (
+                       <div className="_feed_inner_search_results _b_radious6 _padd_b24 _padd_t24 _padd_r24 _padd_l24 _mar_b16">
+                         <h5 className="_title5 _mar_b16">Search Results</h5>
+                         {searchLoading ? (
+                           <div className="text-center p-4">
+                             <div
+                               className="spinner-border text-primary"
+                               role="status"
+                             >
+                               <span className="visually-hidden">
+                                 Searching...
+                               </span>
+                             </div>
+                           </div>
+                         ) : searchResults.length === 0 ? (
+                           <p className="text-muted">
+                             No posts found matching your search.
+                           </p>
+                         ) : (
+                           searchResults.map((post) => (
+                             <div
+                               key={post.id}
+                               className="border-bottom pb-3 mb-3"
+                             >
+                               <div className="d-flex justify-content-between align-items-center">
+                                 <div>
+                                   <h6 className="fw-bold">
+                                     {post.user
+                                       ? `${post.user.firstName} ${post.user.lastName}`
+                                       : "User"}
+                                   </h6>
+                                   <p className="text-muted small mb-1">
+                                     {post.content?.slice(0, 120)}
+                                     {post.content && post.content.length > 120 ? "..." : ""}
+                                   </p>
+                                   <span className="badge bg-light text-dark">
+                                     {post.visibility === "PUBLIC"
+                                       ? "🌍 Public"
+                                       : "🔒 Private"}
+                                   </span>
+                                 </div>
+                                 {post.imageUrl && (
+                                   <Image
+                                     src={post.imageUrl}
+                                     alt=""
+                                     width={80}
+                                     height={80}
+                                     className="rounded"
+                                     style={{ objectFit: "cover" }}
+                                   />
+                                 )}
+                               </div>
+                             </div>
+                           ))
+                         )}
+                       </div>
+                     )}
+
+                     {/* Loading State */}
+                     {loading && (
                       <div className="text-center p-5">
                         <div
                           className="spinner-border text-primary"
@@ -1350,9 +1388,11 @@ export default function FeedPage() {
                               <div className="_feed_inner_timeline_post_top d-flex justify-content-between align-items-center">
                                 <div className="_feed_inner_timeline_post_box">
                                   <div className="_feed_inner_timeline_post_box_image">
-                                    <img
+                                    <Image
                                       src="/assets/images/post_img.png"
                                       alt=""
+                                      width={88}
+                                      height={88}
                                       className="_post_img"
                                     />
                                   </div>
@@ -1407,9 +1447,11 @@ export default function FeedPage() {
 
                               {post.imageUrl && (
                                 <div className="_feed_inner_timeline_image mt-3">
-                                  <img
+                                  <Image
                                     src={post.imageUrl}
                                     alt="Post Attachment"
+                                    width={1200}
+                                    height={600}
                                     className="_time_img"
                                     style={{
                                       maxHeight: "400px",
@@ -1425,8 +1467,11 @@ export default function FeedPage() {
                             <div className="_feed_inner_timeline_total_reacts _padd_r24 _padd_l24 _mar_b26 mt-3">
                               <div className="_feed_inner_timeline_total_reacts_image d-flex align-items-center gap-1">
                                 <span
+                                  onClick={() =>
+                                    handleShowLikers("post", post.id)
+                                  }
                                   className="text-primary font-weight-bold"
-                                  style={{ fontSize: "14px" }}
+                                  style={{ cursor: "pointer", fontSize: "14px" }}
                                 >
                                   👍 {post.likes.length} Likes
                                 </span>
@@ -1461,9 +1506,11 @@ export default function FeedPage() {
                                 >
                                   <div className="_feed_inner_comment_box_content">
                                     <div className="_feed_inner_comment_box_content_image">
-                                      <img
+                                      <Image
                                         src="/assets/images/comment_img.png"
                                         alt=""
+                                        width={52}
+                                        height={52}
                                         className="_comment_img"
                                       />
                                     </div>
@@ -1508,9 +1555,11 @@ export default function FeedPage() {
                                     >
                                       <div className="_comment_main d-flex gap-2">
                                         <div className="_comment_image">
-                                          <img
+                                          <Image
                                             src="/assets/images/txt_img.png"
                                             alt=""
+                                            width={80}
+                                            height={80}
                                             className="_comment_img1"
                                           />
                                         </div>
@@ -1570,6 +1619,15 @@ export default function FeedPage() {
                                                 </li>
                                                 <li
                                                   onClick={() =>
+                                                    handleShowLikers("comment", comment.id)
+                                                  }
+                                                  style={{ cursor: "pointer" }}
+                                                  className="text-muted"
+                                                >
+                                                  <span>View likes</span>
+                                                </li>
+                                                <li
+                                                  onClick={() =>
                                                     setActiveReplyCommentId(
                                                       activeReplyCommentId ===
                                                         comment.id
@@ -1582,6 +1640,20 @@ export default function FeedPage() {
                                                 >
                                                   <span>Reply</span>
                                                 </li>
+                                                {comment.userId === user?.id && (
+                                                  <li
+                                                    onClick={() =>
+                                                      handleDeleteComment(
+                                                        post.id,
+                                                        comment.id,
+                                                      )
+                                                    }
+                                                    style={{ cursor: "pointer" }}
+                                                    className="text-danger"
+                                                  >
+                                                    <span>Delete</span>
+                                                  </li>
+                                                )}
                                                 <li className="text-muted">
                                                   <span>
                                                     {new Date(
@@ -1611,9 +1683,11 @@ export default function FeedPage() {
                                                   style={{ marginLeft: "10px" }}
                                                 >
                                                   <div className="_comment_image">
-                                                    <img
+                                                    <Image
                                                       src="/assets/images/comment_img.png"
                                                       alt=""
+                                                      width={52}
+                                                      height={52}
                                                       className="_comment_img1"
                                                       style={{
                                                         width: "24px",
@@ -1647,33 +1721,57 @@ export default function FeedPage() {
                                                         fontSize: "11px",
                                                       }}
                                                     >
-                                                      <span
-                                                        onClick={() =>
-                                                          handleLikeReply(
-                                                            post.id,
-                                                            comment.id,
-                                                            reply.id,
-                                                          )
-                                                        }
-                                                        className="text-primary"
-                                                        style={{
-                                                          cursor: "pointer",
-                                                        }}
-                                                      >
-                                                        👍{" "}
-                                                        {hasLikedReply
-                                                          ? "Liked"
-                                                          : "Like"}{" "}
-                                                        (
-                                                        {reply.likes?.length ||
-                                                          0}
-                                                        )
-                                                      </span>
-                                                      <span className="text-muted">
-                                                        {new Date(
-                                                          reply.createdAt,
-                                                        ).toLocaleDateString()}
-                                                      </span>
+                                                       <span
+                                                         onClick={() =>
+                                                           handleLikeReply(
+                                                             post.id,
+                                                             comment.id,
+                                                             reply.id,
+                                                           )
+                                                         }
+                                                         className="text-primary"
+                                                         style={{
+                                                           cursor: "pointer",
+                                                         }}
+                                                       >
+                                                         👍{" "}
+                                                         {hasLikedReply
+                                                           ? "Liked"
+                                                           : "Like"}{" "}
+                                                         (
+                                                         {reply.likes?.length ||
+                                                           0}
+                                                         )
+                                                       </span>
+                                                       <span
+                                                         onClick={() =>
+                                                           handleShowLikers("reply", reply.id)
+                                                         }
+                                                         className="text-muted"
+                                                         style={{ cursor: "pointer" }}
+                                                       >
+                                                         View likes
+                                                       </span>
+                                                       {reply.userId === user?.id && (
+                                                         <span
+                                                           onClick={() =>
+                                                             handleDeleteReply(
+                                                               post.id,
+                                                               comment.id,
+                                                               reply.id,
+                                                             )
+                                                           }
+                                                           className="text-danger"
+                                                           style={{ cursor: "pointer" }}
+                                                         >
+                                                           Delete
+                                                         </span>
+                                                       )}
+                                                       <span className="text-muted">
+                                                         {new Date(
+                                                           reply.createdAt,
+                                                         ).toLocaleDateString()}
+                                                       </span>
                                                     </div>
                                                   </div>
                                                 </div>
@@ -1723,6 +1821,29 @@ export default function FeedPage() {
                         );
                       })}
                   </div>
+
+                  {hasMore && (
+                    <div className="text-center mt-3 mb-4">
+                      <button
+                        onClick={handleLoadMore}
+                        disabled={loadingMore}
+                        className="btn btn-primary px-4"
+                      >
+                        {loadingMore ? (
+                          <>
+                            <span
+                              className="spinner-border spinner-border-sm me-2"
+                              role="status"
+                              aria-hidden="true"
+                            ></span>
+                            Loading...
+                          </>
+                        ) : (
+                          "Load More"
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
               {/* Layout Middle End */}
@@ -1742,9 +1863,11 @@ export default function FeedPage() {
                         <div className="_right_inner_area_info_box">
                           <div className="_right_inner_area_info_box_image">
                             <a href="#0">
-                              <img
+                              <Image
                                 src="/assets/images/Avatar.png"
                                 alt="Image"
+                                width={100}
+                                height={100}
                                 className="_ppl_img"
                               />
                             </a>
@@ -1771,6 +1894,87 @@ export default function FeedPage() {
         </div>
       </div>
       {/*Feed Section End*/}
+      <LikersModal
+        isOpen={likersModal.isOpen}
+        onClose={handleCloseLikers}
+        type={likersModal.type}
+        entityId={likersModal.entityId}
+      />
+      {showEditProfile && (
+        <div
+          className="modal d-block"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1050 }}
+          onClick={handleCloseEditProfile}
+        >
+          <div
+            className="modal-dialog modal-dialog-centered"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Edit Profile</h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={handleCloseEditProfile}
+                ></button>
+              </div>
+              <form onSubmit={handleUpdateProfile}>
+                <div className="modal-body">
+                  <div className="mb-3">
+                    <label className="form-label">First Name</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={editFirstName}
+                      onChange={(e) => setEditFirstName(e.target.value)}
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Last Name</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={editLastName}
+                      onChange={(e) => setEditLastName(e.target.value)}
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Profile Picture</label>
+                    <input
+                      ref={editFileInputRef}
+                      type="file"
+                      className="form-control"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] ?? null;
+                        setEditImage(file);
+                      }}
+                    />
+                    {editImage && (
+                      <div className="mt-2 text-muted small">
+                        Selected: {editImage.name}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={handleCloseEditProfile}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn btn-primary">
+                    Save Changes
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

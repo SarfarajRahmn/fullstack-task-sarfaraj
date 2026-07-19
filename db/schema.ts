@@ -5,7 +5,6 @@ import {
   pgTable,
   text,
   timestamp,
-  uuid,
 } from "drizzle-orm/pg-core";
 
 export const visibilityEnum = pgEnum("visibility", ["PUBLIC", "PRIVATE"]);

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useActionState } from "react";
 import { signInAction, type AuthState } from "@/app/actions/auth";
 
@@ -15,26 +16,32 @@ export default function LoginPage() {
   return (
     <section className="_social_login_wrapper _layout_main_wrapper">
       <div className="_shape_one">
-        <img src="/assets/images/shape1.svg" alt="" className="_shape_img" />
-        <img
+        <Image src="/assets/images/shape1.svg" alt="" width={176} height={540} className="_shape_img" />
+        <Image
           src="/assets/images/dark_shape.svg"
           alt=""
+          width={176}
+          height={540}
           className="_dark_shape"
         />
       </div>
       <div className="_shape_two">
-        <img src="/assets/images/shape2.svg" alt="" className="_shape_img" />
-        <img
+        <Image src="/assets/images/shape2.svg" alt="" width={568} height={400} className="_shape_img" />
+        <Image
           src="/assets/images/dark_shape1.svg"
           alt=""
+          width={576}
+          height={408}
           className="_dark_shape _dark_shape_opacity"
         />
       </div>
       <div className="_shape_three">
-        <img src="/assets/images/shape3.svg" alt="" className="_shape_img" />
-        <img
+        <Image src="/assets/images/shape3.svg" alt="" width={568} height={548} className="_shape_img" />
+        <Image
           src="/assets/images/dark_shape2.svg"
           alt=""
+          width={568}
+          height={548}
           className="_dark_shape _dark_shape_opacity"
         />
       </div>
@@ -44,9 +51,11 @@ export default function LoginPage() {
             <div className="col-xl-8 col-lg-8 col-md-12 col-sm-12">
               <div className="_social_login_left">
                 <div className="_social_login_left_image">
-                  <img
+                  <Image
                     src="/assets/images/login.png"
                     alt="Image"
+                    width={1269}
+                    height={1240}
                     className="_left_img"
                   />
                 </div>
@@ -55,9 +64,11 @@ export default function LoginPage() {
             <div className="col-xl-4 col-lg-4 col-md-12 col-sm-12">
               <div className="_social_login_content">
                 <div className="_social_login_left_logo _mar_b28">
-                  <img
+                  <Image
                     src="/assets/images/logo.svg"
                     alt="Image"
+                    width={158}
+                    height={33}
                     className="_left_logo"
                   />
                 </div>

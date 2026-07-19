@@ -1,5 +1,92 @@
 @import "tailwindcss";
 
+.dark {
+  color-scheme: dark;
+}
+
+.dark body {
+  background-color: #111827;
+  color: #f3f4f6;
+}
+
+.dark .bg-white {
+  background-color: #1f2937 !important;
+}
+
+.dark .text-dark {
+  color: #f3f4f6 !important;
+}
+
+.dark .text-muted {
+  color: #9ca3af !important;
+}
+
+.dark .border-bottom {
+  border-color: #374151 !important;
+}
+
+.dark .bg-light {
+  background-color: #374151 !important;
+}
+
+.dark .form-control {
+  background-color: #374151;
+  border-color: #4b5563;
+  color: #f3f4f6;
+}
+
+.dark .form-control:focus {
+  background-color: #374151;
+  color: #f3f4f6;
+}
+
+.dark .modal-content {
+  background-color: #1f2937;
+  color: #f3f4f6;
+}
+
+.dark .modal-header,
+.dark .modal-footer {
+  border-color: #374151;
+}
+
+.dark .btn-close {
+  filter: invert(1);
+}
+
+.dark .navbar-light {
+  --bs-navbar-color: #9ca3af;
+  --bs-navbar-hover-color: #e5e7eb;
+  --bs-navbar-active-color: #f3f4f6;
+  --bs-navbar-toggler-border-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark .bg-light {
+  background-color: #374151 !important;
+}
+
+.dark .navbar-light .navbar-brand {
+  color: #f3f4f6;
+}
+
+.dark .navbar-light .navbar-nav .nav-link {
+  color: #9ca3af;
+}
+
+.dark .navbar-light .navbar-nav .nav-link:hover,
+.dark .navbar-light .navbar-nav .nav-link:focus {
+  color: #e5e7eb;
+}
+
+.dark .navbar-light .navbar-nav .nav-link.disabled {
+  color: #6b7280;
+}
+
+.dark .navbar-light .navbar-nav .nav-link.active,
+.dark .navbar-light .show>.nav-link {
+  color: #60a5fa;
+}
+
 ._social_registration_form_error,
 ._social_login_form_error {
   color: #e02424;

@@ -52,3 +52,9 @@ export const likeSchema = z.object({
   entityType: z.enum(["post", "comment", "reply"]),
   entityId: z.string().trim().min(1, "Entity id is required."),
 });
+
+export const updateProfileSchema = z.object({
+  firstName: z.string().trim().min(1, "First name is required.").optional(),
+  lastName: z.string().trim().min(1, "Last name is required.").optional(),
+  image: z.any().optional(),
+});

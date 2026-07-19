@@ -22,7 +22,7 @@ authentication, a database, state management, and business logic.
 
 ### Authentication
 - **Better Auth** (session-based, cookie sessions)
-- Protected routes enforced by **middleware**
+- Protected routes enforced by **proxy.ts** (Next.js 16)
 
 ### Backend
 - **Route Handlers** (`app/api/**`)
@@ -98,38 +98,43 @@ app/
     register/page.tsx
   feed/
     page.tsx            # protected feed UI (already converted)
+    layout.tsx          # server-side auth gate + UserProvider
+    user-context.tsx    # React context for current user
   api/
     auth/[...all]/route.ts
-  actions/              # server actions (createPost, likePost, ...)
+    feed/route.ts       # feed API (eager loading, visibility filter)
+  actions/
+    auth.ts             # signUpAction, signInAction
+    posts.ts            # create/delete post, like/comment/reply actions
   layout.tsx
   page.tsx              # root — redirects to /feed (auth) or /login
   globals.css
 
+proxy.ts                # Next.js 16 route proxy (auth guards)
+
 components/             # UI pieces wired to real data
 
-actions/               # server actions + shared action helpers
-
 db/
-  schema.ts            # Drizzle table definitions
-  index.ts             # Drizzle client (pool + drizzle())
+  schema.ts             # Drizzle table definitions
+  index.ts              # Drizzle client (pool + drizzle())
 
 lib/
-  auth.ts              # Better Auth server instance
-  auth-client.ts       # Better Auth client (browser)
-  validations.ts       # Zod schemas (register, login, post, comment, reply, upload)
-  upload.ts            # image upload helper (local | UploadThing)
+  auth.ts               # Better Auth server instance
+  auth-client.ts        # Better Auth client (browser)
+  validations.ts        # Zod schemas (register, login, post, comment, reply, upload)
+  upload.ts             # image upload helper (local | UploadThing)
 
 store/
-  auth-store.ts        # Zustand: current user, session, loading
-  feed-store.ts        # Zustand: posts, likes, comments, loading
+  auth-store.ts         # Zustand: current user, session, loading
+  feed-store.ts         # Zustand: posts, likes, comments, loading
 
-hooks/                 # reusable data hooks
+hooks/                  # reusable data hooks
 
-types/                 # shared TS types
+types/                  # shared TS types
 
-drizzle/               # generated migrations
+drizzle/                # generated migrations
 
-public/uploads/        # local image uploads
+public/uploads/         # local image uploads
 ```
 
 ---
@@ -153,16 +158,17 @@ On success the user is created and a session cookie is issued
 - `signOut` clears the session and redirects to `/login`.
 
 ### Route protection
-- `middleware.ts` protects `/feed` (and any authed route).
+- `proxy.ts` protects `/feed` (and any authed route).
 - Unauthenticated users are **automatically redirected to `/login`**.
 - Authenticated users **cannot** reach `/login` or `/register` (redirected to
   `/feed`).
 - The root `/` is a server-side auth gate: authed → `/feed`, anon → `/login`.
+- The `/feed` layout also performs a server-side session check as a defense-in-depth measure.
 
 ```ts
-// app/(auth)/login — guarded
-// app/(auth)/register — guarded
-// app/feed — guarded by middleware + server session check
+// app/(auth)/login — guarded by proxy.ts
+// app/(auth)/register — guarded by proxy.ts
+// app/feed — guarded by proxy.ts + server session check in layout
 ```
 
 ---
@@ -314,7 +320,7 @@ Client-side validation is for UX only; **the server is the source of truth.**
 ## Security
 
 - Sanitize / validate **all** input with Zod on the server.
-- Route protection via **middleware** + server session check.
+- Route protection via **proxy.ts** + server session check.
 - Private posts visible **only to their owner**.
 - Only authenticated users can create posts / like / comment / reply.
 - One like per user enforced by a unique DB constraint.
@@ -343,7 +349,7 @@ Worked incrementally, one feature at a time:
 5. Generate schema
 6. Run migrations
 7. Authentication
-8. Protected routes (middleware)
+8. Protected routes (proxy.ts)
 9. Registration
 10. Login
 11. Zustand auth store
@@ -364,10 +370,11 @@ Worked incrementally, one feature at a time:
 | Protected `/feed`   | ✅ Done      |
 | Root `/` auth gate  | ✅ Done      |
 | Registration/Login UI wired | ✅ Done |
-| Neon + Drizzle      | ⬜ Pending   |
-| Posts / Comments / Replies / Likes | ⬜ Pending |
-| Zustand stores      | ⬜ Pending   |
-| Optimistic updates  | ⬜ Pending   |
+| Neon + Drizzle      | ✅ Done      |
+| Posts / Comments / Replies / Likes | ✅ Done |
+| Zustand stores      | ✅ Done      |
+| Optimistic updates  | ✅ Done      |
+| Route proxy (`proxy.ts`) | ✅ Done |
 
 ---
 

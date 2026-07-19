@@ -20,7 +20,8 @@
     ],
     "paths": {
       "@/*": ["./*"]
-    }
+    },
+    "verbatimModuleSyntax": false
   },
   "include": [
     "next-env.d.ts",
